@@ -36,8 +36,10 @@ if [ "${SKIP_BUILD:-0}" != 1 ]; then
     STOCK_JAR="${STOCK_JAR:-}" bash "$PROJECT_DIR/scripts/build_java.sh"
     bash "$PROJECT_DIR/scripts/build_hook.sh"
     bash "$PROJECT_DIR/scripts/build_renderers.sh"
+    bash "$PROJECT_DIR/scripts/build_mainmirror.sh"
 fi
-for f in "$JAR" "$PROJECT_DIR/build/libcarplay_hook.so" "$PROJECT_DIR/build/maneuver_render"; do
+for f in "$JAR" "$PROJECT_DIR/build/libcarplay_hook.so" "$PROJECT_DIR/build/maneuver_render" \
+         "$PROJECT_DIR/build/mainmirror_display"; do
     [ -s "$f" ] || { echo "ERROR: missing build artifact $f"; exit 1; }
 done
 
@@ -70,15 +72,20 @@ else
 fi
 
 # RGI native half, installed by Toolbox/scripts/rgi_companion.sh from AltScreen INSTALL.
+# wireless adapters: AltScreen answers the alt screen only when the source asks for it
+python3 "$PROJECT_DIR/tools/patch_altscreen_requested.py" "$OUT/$ALTS_LIB" "$OUT/$ALTS_LIB"
+
 mkdir -p "$OUT/$RGI_DIR"
 cp "$PROJECT_DIR/build/libcarplay_hook.so" "$PROJECT_DIR/build/maneuver_render" \
+   "$PROJECT_DIR/build/mainmirror_display" \
    "$PROJECT_DIR/maneuver_render/resources/flag_atlas.rgba" \
    "$PROJECT_DIR/deploy/smartphone_integrator/carplay_startup.sh" \
    "$PROJECT_DIR/deploy/smartphone_integrator/carplay_monitor.sh" \
    "$PROJECT_DIR/deploy/smartphone_integrator/carplay_processes.sh" \
    "$PROJECT_DIR/deploy/smartphone_integrator/carplay_cleanup.sh" \
    "$PROJECT_DIR/deploy/altscreen/carplay_child.json" "$OUT/$RGI_DIR/"
-chmod 755 "$OUT/$RGI_DIR"/*.sh "$OUT/$RGI_DIR/maneuver_render" "$OUT/$RGI_DIR/libcarplay_hook.so"
+chmod 755 "$OUT/$RGI_DIR"/*.sh "$OUT/$RGI_DIR/maneuver_render" "$OUT/$RGI_DIR/libcarplay_hook.so" \
+          "$OUT/$RGI_DIR/mainmirror_display"
 
 # The one HMI JAR (RGI Java + the AltScreen ctx-81 video context). AltScreen's INSTALL,
 # START and STATUS refuse any JAR whose POSIX cksum/size differ from the pinned pair.
