@@ -9,6 +9,22 @@ keyValue
     poll    0
 
 script
+   value   sys 1 0x0100 "/eso/hmi/engdefs/scripts/mqb/cockpit_mod_on.sh"
+   label   "Cockpit mod: ON"
+
+script
+   value   sys 1 0x0100 "/eso/hmi/engdefs/scripts/mqb/cockpit_mod_off.sh"
+   label   "Cockpit mod: OFF (stock CarPlay)"
+
+script
+   value   sys 1 0x0100 "/eso/hmi/engdefs/scripts/mqb/cockpit_mode_wireless.sh"
+   label   "Cockpit mode: wireless (adapter, main-screen mirror)"
+
+script
+   value   sys 1 0x0100 "/eso/hmi/engdefs/scripts/mqb/cockpit_mode_wired.sh"
+   label   "Cockpit mode: wired (cable, CarPlay cluster map)"
+
+script
    value   sys 1 0x0100 "/eso/hmi/engdefs/scripts/mqb/install_mmi_cockpit_carplay_rx.sh"
    label   "INSTALL"
 

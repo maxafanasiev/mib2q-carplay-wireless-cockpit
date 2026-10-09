@@ -5,7 +5,7 @@
 #   rgi_companion.sh remove    called by RESTORE ORIGINAL before the native restore
 #
 # install puts the RGI native half next to AltScreen:
-#   /mnt/app/root/hooks/  libcarplay_hook.so maneuver_render flag_atlas.rgba
+#   /mnt/app/root/hooks/  libcarplay_hook.so maneuver_render mainmirror_display flag_atlas.rgba
 #                         carplay_startup.sh carplay_monitor.sh carplay_processes.sh
 #                         carplay_cleanup.sh
 # and wires it in:
@@ -41,7 +41,7 @@ HOOKS=$(p /mnt/app/root/hooks)
 CFG=$(p /mnt/system/etc/eso/production/smartphone_integrator.json)
 DIO=$(p /mnt/system/etc/eso/production/dio_manager.json)
 ALTS_PRELOAD=/mnt/app/root/carplay-altscreen/lib/libcarplay_altscreen.so
-FILES="libcarplay_hook.so maneuver_render flag_atlas.rgba carplay_startup.sh
+FILES="libcarplay_hook.so maneuver_render mainmirror_display flag_atlas.rgba carplay_startup.sh
 carplay_monitor.sh carplay_processes.sh carplay_cleanup.sh"
 
 mount_app_rw(){ [ "$TESTING" = 1 ] || mount -uw /mnt/app; }
@@ -53,7 +53,7 @@ fail(){ echo "FAIL: $1"; finish_mounts; exit 1; }
 
 mode_for(){
     case $1 in
-        *.so|*.sh|maneuver_render) echo 755 ;;
+        *.so|*.sh|maneuver_render|mainmirror_display) echo 755 ;;
         *) echo 644 ;;
     esac
 }
@@ -162,6 +162,7 @@ remove_files(){
         [ ! -e "$HOOKS/$name" ] || return 1
     done
     rm -f "$HOOKS/cluster_ui.url" "$HOOKS/cluster_fps"   # GEM cluster layout / refresh choices
+    rm -f "$HOOKS/mode.wired" "$HOOKS/mod.off" "$HOOKS/mainmirror.conf" "$HOOKS/mainmirror.off"
     rmdir "$HOOKS" 2>/dev/null || true
 }
 

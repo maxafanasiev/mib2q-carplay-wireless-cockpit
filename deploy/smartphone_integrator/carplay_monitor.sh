@@ -93,6 +93,29 @@ start_renderer()
     fi
 }
 
+# Main-screen mirror sidecar (adapter sessions). It idles until the hook asks for
+# the mirror and exits when it ends, so it is simply restarted whenever it is gone.
+MM_NAME=mainmirror_display
+MM_PID_FILE=/tmp/carplay_mainmirror_display.pid
+
+start_mainmirror()
+{
+    [ -x "$H/$MM_NAME" ] || return 0
+    monitor_current || return 0
+    MM_PID=
+    [ -r "$MM_PID_FILE" ] && read MM_PID < "$MM_PID_FILE"
+    if [ -n "$MM_PID" ]; then
+        cp_renderer_identity "$MM_NAME" "$MM_PID"
+        [ $? -eq 1 ] || return 0
+    fi
+    (
+        cd "$H" || exit 1
+        LD_PRELOAD= GRAPHICS_ROOT=/proc/boot exec "$H/$MM_NAME" \
+            </dev/null >>"/tmp/$MM_NAME.log" 2>&1
+    ) &
+    echo "$!" > "$MM_PID_FILE"
+}
+
 monitor_main()
 {
     trap 'exit 0' 1 2 15
@@ -106,15 +129,22 @@ monitor_main()
     echo "[monitor] generation=$DIO_PID active" >> "$WLOG"
 
     cp_seed_renderer_pid_files
+    if [ -f "$H/mod.off" ]; then
+        echo "[monitor] mod off (hooks/mod.off): no renderers" >> "$WLOG"
+        exit 0
+    fi
     start_renderer maneuver_render initial
+    start_mainmirror
 
     MON_TICKS=0
     while monitor_current; do
         start_renderer maneuver_render restart
+        start_mainmirror
         sleep 2
         MON_TICKS=`expr "$MON_TICKS" + 1`
         if [ `expr "$MON_TICKS" % 150` -eq 0 ]; then
             cp_cap_all_logs "$WLOG"
+            cp_cap_log "/tmp/$MM_NAME.log"
         fi
     done
 

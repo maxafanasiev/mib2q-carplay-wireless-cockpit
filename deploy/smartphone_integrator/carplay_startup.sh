@@ -51,17 +51,32 @@ MONITOR_PID=$!
 # still holds here - a preload loaded into this shell may already have removed
 # itself from it. Ours goes last; each entry once.
 INHERITED_PRELOAD=${LD_PRELOAD:-}
+
+# Wireless (adapter) is the default: AltScreen stays out and the hook mirrors the main
+# screen to the cluster. GEM "Cockpit mode: wired" creates hooks/mode.wired, which brings
+# AltScreen back for the next connection.
+if [ -f "$H/mode.wired" ]; then WIRELESS=0; else WIRELESS=1; fi
+echo "[startup] wireless_mode=$WIRELESS" >> "$WLOG"
+
 PRELOAD_LIST=
 OLD_IFS=$IFS
 IFS=:
 for lib in ${CARPLAY_PRELOAD_EXTRA:-} $INHERITED_PRELOAD $H/libcarplay_hook.so; do
     [ -n "$lib" ] || continue
+    if [ "$WIRELESS" = 1 ]; then
+        case "$lib" in */libcarplay_altscreen.so) continue ;; esac
+    fi
     case ":$PRELOAD_LIST:" in
         *":$lib:"*) ;;
         *) PRELOAD_LIST=${PRELOAD_LIST:+$PRELOAD_LIST:}$lib ;;
     esac
 done
 IFS=$OLD_IFS
+# GEM "Cockpit mod: OFF" (hooks/mod.off): stock CarPlay, nothing preloaded.
+if [ -f "$H/mod.off" ]; then
+    PRELOAD_LIST=
+    echo "[startup] mod off (hooks/mod.off): stock dio_manager" >> "$WLOG"
+fi
 LD_PRELOAD=$PRELOAD_LIST
 export LD_PRELOAD
 echo "[startup] preload inherited='${INHERITED_PRELOAD}' extra='${CARPLAY_PRELOAD_EXTRA:-}' -> '$LD_PRELOAD'" >> "$WLOG"
