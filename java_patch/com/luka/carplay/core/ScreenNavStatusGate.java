@@ -21,6 +21,7 @@ public final class ScreenNavStatusGate {
     private static boolean appliedRouteBlocked;
     private static boolean desiredCurrentPositionBlocked;
     private static boolean installScheduled;
+    private static boolean desiredMirrorMode;
 
     private ScreenNavStatusGate() { }
 
@@ -63,6 +64,7 @@ public final class ScreenNavStatusGate {
 
             gate.setRouteGuidanceBlocked(desiredRouteBlocked);
             gate.setCurrentPositionInfoBlocked(desiredCurrentPositionBlocked);
+            gate.setMirrorMode(desiredMirrorMode);
             appliedRouteBlocked = desiredRouteBlocked;
         } catch (Throwable t) {
         }
@@ -98,6 +100,7 @@ public final class ScreenNavStatusGate {
         gate = next;
         gate.setRouteGuidanceBlocked(desiredRouteBlocked);
         gate.setCurrentPositionInfoBlocked(desiredCurrentPositionBlocked);
+        gate.setMirrorMode(desiredMirrorMode);
         appliedRouteBlocked = desiredRouteBlocked;
         installScheduled = false;
         Log.i(TAG, "native route-guidance gate installed on Navigation service edge");
@@ -123,6 +126,27 @@ public final class ScreenNavStatusGate {
     public static synchronized void setCurrentPositionInfoBlocked(boolean blocked) {
         desiredCurrentPositionBlocked = blocked;
         if (gate != null) gate.setCurrentPositionInfoBlocked(blocked);
+    }
+
+    /** Main-screen mirror on/off: blank the cluster's lower bar while it is on. BAP writes go
+     * through NavigationJobs like every other write to the combi service. */
+    public static synchronized void setMirrorMode(final boolean on) {
+        desiredMirrorMode = on;
+        Navigation navigation = Navigation.getInstance();
+        if (navigation == null || navigation.getDispatcher() == null) return;
+        try {
+            navigation.getDispatcher().execute(new Runnable() {
+                public void run() {
+                    synchronized (ScreenNavStatusGate.class) {
+                        if (gate != null) {
+                            try { gate.setMirrorMode(desiredMirrorMode); } catch (Throwable t) { }
+                        }
+                    }
+                }
+            });
+        } catch (Throwable t) {
+        }
+        Log.w(TAG, "cluster lower bar " + (on ? "blanked (mirror on)" : "restored"));
     }
 
     /** Exact stock-service availability edge, after prepareCombiBAPService + stock updateAll.

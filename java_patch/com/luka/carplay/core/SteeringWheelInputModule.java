@@ -35,6 +35,10 @@ public final class SteeringWheelInputModule implements Module {
     private static final int KBD_MFW_3GP = 8;
     private static final int KEY_DDS = 16;
     private static final int KEY_MFW_ROLLER_LEFT = 40;
+    private static final int KEY_MFW_BACK = 41;
+    /* knob report button bits, as the real MMI knob sends them */
+    private static final int KNOB_SELECT = 0x01;
+    private static final int KNOB_BACK = 0x04;
     private static final int KST_RELEASED = 0;
     private static final int KST_PRESSED = 1;
     private static final int ATTR_VALID = 1;
@@ -203,10 +207,22 @@ public final class SteeringWheelInputModule implements Module {
         }
     }
 
+    private static void sendKnobButtons(int buttons) {
+        boolean sent = com.luka.carplay.bus.CarplayBus.getInstance().sendBinary(
+            com.luka.carplay.bus.CarplayBus.CMD_MIRROR_SELECT, new byte[] { (byte)buttons });
+        if (buttons != 0) Log.i(TAG, "MFW key -> CarPlay knob buttons 0x" + Integer.toHexString(buttons) + (sent ? "" : " (bus down)"));
+    }
+
     private final class RawKeyListener implements DSIKeyPanelListener {
         public void updateKey2(int keyboardId, int keyCode, int keyState,
                                int timeStamp, int validFlag) {
             if (!running || validFlag != ATTR_VALID) return;
+            if (keyCode == KEY_MFW_BACK && (keyboardId == KBD_MFW || keyboardId == KBD_MFW_3GP)
+                    && ScreenModule.isMainMirrorVideo()
+                    && (keyState == KST_PRESSED || keyState == KST_RELEASED)) {
+                sendKnobButtons(keyState == KST_PRESSED ? KNOB_BACK : 0);
+                return;
+            }
 
             if (keyCode == KEY_DDS) {
                 clearCollapsedSelect(keyState);
@@ -217,8 +233,12 @@ public final class SteeringWheelInputModule implements Module {
                     || (keyState != KST_PRESSED && keyState != KST_RELEASED)) return;
 
             armCollapsedSelect(keyState);
+            if (ScreenModule.isMainMirrorVideo()) {
+                /* the VC map tab keeps the stock select away from CarPlay; press the knob ourselves */
+                sendKnobButtons(keyState == KST_PRESSED ? KNOB_SELECT : 0);
+                return;
+            }
             if (keyState != KST_PRESSED) return;
-
             boolean mapTab = isConfirmedMapTab();
             Log.i(TAG, "MFW OK pressed board=" + keyboardId + " mapTab=" + mapTab);
             if (!mapTab) return;

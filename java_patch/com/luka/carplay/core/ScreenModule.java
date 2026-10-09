@@ -88,6 +88,8 @@ public final class ScreenModule implements Module {
     private static volatile boolean connected = false;
     private static volatile boolean navActive = false;
     private static volatile boolean altScreenVideo = false;
+    /* main-screen copy from mainmirror_display (adapter sessions), also on displayable 3 */
+    private static volatile boolean mainMirrorVideo = false;
     private static boolean navHidePending;
 
     static int contextFor(boolean connected, boolean video, boolean nav) {
@@ -99,13 +101,16 @@ public final class ScreenModule implements Module {
     /** Recompute desiredCtx and wake the worker. Caller must NOT hold LOCK. */
     private static void republish() {
         synchronized (LOCK) {
-            desiredCtx = contextFor(connected, altScreenVideo, navActive);
+            desiredCtx = contextFor(connected, altScreenVideo || mainMirrorVideo, navActive);
             LOCK.notifyAll();
         }
     }
 
     /** True while displayable 3 carries the AltScreen CarPlay video (ctx 81 target). */
     public static boolean isAltScreenVideo() { return altScreenVideo; }
+
+    /** True while displayable 3 carries the main-screen mirror (wireless adapter). */
+    public static boolean isMainMirrorVideo() { return mainMirrorVideo; }
 
     /** Poll the AltScreen markers; only the switch worker calls this, never under LOCK. */
     private static void refreshAltScreenVideo() {
@@ -115,6 +120,15 @@ public final class ScreenModule implements Module {
         Log.i(TAG, "AltScreen video " + (ready ? "ready -> ctx " + CTX_CLUSTER_VIDEO : "gone"));
         republish();
         if (ready) com.luka.carplay.cluster.AltScreenCluster.onVideoReady();
+    }
+
+    private static void refreshMainMirrorVideo() {
+        boolean ready = connected && com.luka.carplay.cluster.AltScreenVideo.isMainMirrorReady();
+        if (ready == mainMirrorVideo) return;
+        mainMirrorVideo = ready;
+        Log.w(TAG, "main-screen mirror " + (ready ? "ready -> ctx " + CTX_CLUSTER_VIDEO : "gone"));
+        republish();
+        ScreenNavStatusGate.setMirrorMode(ready);
     }
 
     /** Presentation latch, not merely route intent.  RouteGuidance may set true only after the
@@ -288,6 +302,7 @@ public final class ScreenModule implements Module {
         contextWriterThread = Thread.currentThread();
         while (true) {
             refreshAltScreenVideo();
+            refreshMainMirrorVideo();
             int target; IDisplayManager d; boolean reconcileOnly = false;
             synchronized (LOCK) {
                 while (dm == null) {
@@ -342,7 +357,7 @@ public final class ScreenModule implements Module {
         java.io.FileOutputStream out = null;
         try {
             out = new java.io.FileOutputStream(CTX_STATE_FILE);
-            out.write(("ctx=" + ctx + "\nvideo=" + (altScreenVideo ? 1 : 0)
+            out.write(("ctx=" + ctx + "\nvideo=" + (altScreenVideo ? 1 : 0) + "\nmainmirror=" + (mainMirrorVideo ? 1 : 0)
                 + "\nnav=" + (navActive ? 1 : 0) + "\ntime_ms=" + System.currentTimeMillis()
                 + "\n").getBytes());
         } catch (Throwable t) {

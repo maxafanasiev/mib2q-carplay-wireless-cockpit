@@ -32,6 +32,14 @@ public class GatedCombiService implements CombiBAPServiceNavi {
      * travel information and destination menu; maneuver/lane records remain
      * session-gated. */
     volatile boolean blockCurrentPositionInfo;
+    /* Main-screen mirror on the cluster: the lower bar (altitude, street, scale) would sit over
+     * CarPlay, so it gets "no data"; the real values are kept and sent back when it ends. */
+    private boolean mirrorMode;
+    private boolean haveAltitude, haveScale, havePosition;
+    private int altValue, altUnit;
+    private int scaleAuto, scaleValue, scaleUnit;
+    private boolean scaleAutoActive, scaleIntersection;
+    private String position = "";
 
     public GatedCombiService(CombiBAPServiceNavi r) { this.real = r; }
 
@@ -59,8 +67,25 @@ public class GatedCombiService implements CombiBAPServiceNavi {
         if (!blockRouteGuidance) real.updateDistanceToNextManeuver(a, b, c, d);
     }
 
-    public void updateCurrentPositionInfo(String s) {
-        if (!blockCurrentPositionInfo) real.updateCurrentPositionInfo(s);
+    public synchronized void updateCurrentPositionInfo(String s) {
+        position = s;
+        havePosition = true;
+        if (!blockCurrentPositionInfo) real.updateCurrentPositionInfo(mirrorMode ? "" : s);
+    }
+
+    /** Called on NavigationJobs only. */
+    public synchronized void setMirrorMode(boolean on) {
+        if (mirrorMode == on) return;
+        mirrorMode = on;
+        if (on) {
+            real.updateAltitude(0, 0);
+            if (haveScale) real.updateMapScale(scaleAuto, scaleAutoActive, 0, 0, scaleIntersection);
+            if (!blockCurrentPositionInfo) real.updateCurrentPositionInfo("");
+        } else {
+            if (haveAltitude) real.updateAltitude(altValue, altUnit);
+            if (haveScale) real.updateMapScale(scaleAuto, scaleAutoActive, scaleValue, scaleUnit, scaleIntersection);
+            if (havePosition && !blockCurrentPositionInfo) real.updateCurrentPositionInfo(position);
+        }
     }
 
     public void updateManeuverDescriptor(CombiBAPNaviManeuverDescriptor[] a) {
@@ -109,13 +134,19 @@ public class GatedCombiService implements CombiBAPServiceNavi {
     public void updateSupportedMapViews(int a, int b) { real.updateSupportedMapViews(a, b); }
     public void updateMapVisibility(boolean a, boolean b) { real.updateMapVisibility(a, b); }
     public void updateMapOrientation(int a) { real.updateMapOrientation(a); }
-    public void updateMapScale(int a, boolean b, int c, int d, boolean e) {
-        real.updateMapScale(a, b, c, d, e);   /* native map scale — not gated on this branch */
+    public synchronized void updateMapScale(int a, boolean b, int c, int d, boolean e) {
+        scaleAuto = a; scaleAutoActive = b; scaleValue = c; scaleUnit = d; scaleIntersection = e;
+        haveScale = true;
+        if (mirrorMode) real.updateMapScale(a, b, 0, 0, e);
+        else real.updateMapScale(a, b, c, d, e);   /* native map scale, shown under the native map */
     }
     public void updateDestinationInfo(CombiBAPDestinationInfo a) {
         if (!blockCurrentPositionInfo) real.updateDestinationInfo(a); }
-    public void updateAltitude(int a, int b) {
-        real.updateAltitude(a, b);            /* native altitude — not gated on this branch */
+    public synchronized void updateAltitude(int a, int b) {
+        altValue = a; altUnit = b;
+        haveAltitude = true;
+        if (mirrorMode) real.updateAltitude(0, 0);
+        else real.updateAltitude(a, b);       /* native altitude, shown under the native map */
     }
     public void updateOnlineNavigationState(int a, int b, int c) {
         real.updateOnlineNavigationState(a, b, c); }

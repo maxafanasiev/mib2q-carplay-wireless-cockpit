@@ -15,16 +15,26 @@ public final class AltScreenVideo {
 
     public static final String ACTIVE_MARKER = "/tmp/mmi-mirror-active";
     public static final String READY_MARKER  = "/tmp/mmi-mirror-basevideo.ready";
+    public static final String MAIN_MIRROR_READY = "/tmp/carplay_mainmirror.ready";
 
     /* Host tests point these at scratch files. */
     private static String activePath = ACTIVE_MARKER;
     private static String readyPath  = READY_MARKER;
+    private static String mainMirrorPath = MAIN_MIRROR_READY;
 
     private AltScreenVideo() {}
 
     public static boolean isReady() {
         try {
             return new File(activePath).exists() && new File(readyPath).exists();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    public static boolean isMainMirrorReady() {
+        try {
+            return new File(mainMirrorPath).exists();
         } catch (Throwable t) {
             return false;
         }

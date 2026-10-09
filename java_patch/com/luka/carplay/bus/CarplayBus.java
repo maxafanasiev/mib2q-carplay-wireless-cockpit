@@ -55,6 +55,8 @@ public final class CarplayBus {
     public static final int CMD_ALT_ZONE_ACK   = 0x0112;   /* hook->Java [u8 mode][i32 LE status]       */
     public static final int CMD_ALT_UICTX      = 0x0115;   /* UTF-8 maps:/car/instrumentcluster URL -> showUI */
     public static final int CMD_ALT_RGI        = 0x0116;   /* [u8 0=off 1=on] confirmed RGI presentation */
+    public static final int CMD_MIRROR_KNOB    = 0x0117;   /* [i8 signed MapScale step] -> CarPlay knob wheel */
+    public static final int CMD_MIRROR_SELECT  = 0x0118;   /* [u8 knob button bits: 1 select, 4 back, 0 released] */
 
     public interface Listener {
         void onFrame(int type, int flags, byte[] payload, int len);

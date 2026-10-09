@@ -34,9 +34,17 @@ public final class AltScreenCluster {
 
     /** Stock CombiBAPListener.setMapScale steps (positive = zoom out). */
     public static void onMapScaleSteps(int steps) {
-        if (steps == 0 || !ScreenModule.isAltScreenVideo()) return;
+        if (steps == 0) return;
         if (steps > 127) steps = 127;
         if (steps < -127) steps = -127;
+        if (!ScreenModule.isAltScreenVideo()) {
+            /* main-screen mirror: the roller turns the CarPlay knob (zoom on maps, scroll in lists) */
+            if (!ScreenModule.isMainMirrorVideo()) return;
+            boolean sent = CarplayBus.getInstance().sendBinary(CarplayBus.CMD_MIRROR_KNOB,
+                new byte[] { (byte)steps });
+            Log.i(TAG, "roller steps=" + steps + " -> CarPlay knob" + (sent ? "" : " (bus down)"));
+            return;
+        }
         boolean sent = CarplayBus.getInstance().sendBinary(CarplayBus.CMD_ALT_ZOOM,
             new byte[] { (byte)steps });
         Log.i(TAG, "roller steps=" + steps + " -> cluster zoom " + (steps > 0 ? "out" : "in")
