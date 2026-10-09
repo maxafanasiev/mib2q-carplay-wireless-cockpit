@@ -14,11 +14,13 @@
 #include "routeguidance/rgd_hook.h"
 #include "coverart/coverart_hook.h"
 #include "altcluster/alt_cluster.h"
+#include "mainmirror/main_mirror.h"
 
 const hook_module_def_t* const hook_module_table[] = {
     &rgd_module_def,
     &coverart_module_def,
     &alt_cluster_module_def,
+    &main_mirror_module_def,
 };
 
 const size_t hook_module_table_count =

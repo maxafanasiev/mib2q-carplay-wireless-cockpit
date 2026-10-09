@@ -108,6 +108,12 @@
 #define CMD_ALT_RGI             0x0116  /* binary [u8 0=off 1=on] — Java's     */
                                         /* confirmed RGI presentation; hook    */
                                         /* picks the Maps cluster URL (showUI) */
+#define CMD_MIRROR_KNOB         0x0117  /* binary [int8 signed MapScale step] — */
+                                        /* main-screen mirror: steering-wheel  */
+                                        /* roller as CarPlay knob rotation     */
+#define CMD_MIRROR_SELECT       0x0118  /* binary [u8 knob button bits] —      */
+                                        /* 0x01 select, 0x04 back, 0 released; */
+                                        /* steering-wheel keys as CarPlay knob */
 /* NOTE: dispatchable inbound types must be < MAX_TYPES in bus.c (grown to      */
 /* cover this 0x11x block).                                                     */
 
